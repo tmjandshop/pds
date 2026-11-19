@@ -4,6 +4,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>PDS 다이어리</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="theme-color" content="#3a4aa0">
 <style>
   html, body { margin: 0; height: 100%; background: #fff; }
   iframe { position: fixed; inset: 0; width: 100%; height: 100%; border: 0; }
@@ -15,8 +19,25 @@
 <body>
 <script>
 (function () {
+  try { if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js'); } catch (e) {}
   var KEY = 'pds:exec', url = '';
-  try { if (/[?&]reset\b/.test(location.search)) localStorage.removeItem(KEY); url = localStorage.getItem(KEY) || ''; } catch (e) {}
+  function rd() {
+    var v = '';
+    try { v = localStorage.getItem(KEY) || ''; } catch (e) {}
+    if (!v) { var m = document.cookie.match(/(?:^|; )pdsexec=([^;]*)/); if (m) { try { v = decodeURIComponent(m[1]); } catch (e) {} } }
+    return v;
+  }
+  function wr(v) {
+    try { localStorage.setItem(KEY, v); } catch (e) {}
+    try { document.cookie = 'pdsexec=' + encodeURIComponent(v) + '; max-age=31536000; path=/; SameSite=Lax; Secure'; } catch (e) {}
+    return rd() === v;
+  }
+  function clr() {
+    try { localStorage.removeItem(KEY); } catch (e) {}
+    try { document.cookie = 'pdsexec=; max-age=0; path=/'; } catch (e) {}
+  }
+  if (/[?&]reset/.test(location.search)) clr();
+  url = rd();
   function show(u) {
     var f = document.createElement('iframe');
     f.src = u; f.title = 'PDS 다이어리'; f.allow = 'clipboard-read; clipboard-write; geolocation';
@@ -24,13 +45,15 @@
   }
   if (url) { show(url); return; }
   var d = document.createElement('div'); d.className = 'ask';
-  d.innerHTML = '<b>앱 주소를 한 번만 입력하세요</b><br>구글 웹 앱의 /exec 로 끝나는 주소입니다. 이 기기의 브라우저에만 저장됩니다.<input id="u" placeholder="https:\/\/script.google.com/macros/s/…/exec" autocomplete="off"><button id="b" type="button">저장하고 열기</button>';
+  d.innerHTML = '<b>앱 주소를 한 번만 입력하세요</b><br>구글 웹 앱의 /exec 로 끝나는 주소입니다. 이 기기의 브라우저에만 저장됩니다.<input id="u" placeholder="https://script.google.com/macros/s/…/exec" autocomplete="off"><button id="b" type="button">저장하고 열기</button>';
   document.body.appendChild(d);
   document.getElementById('b').onclick = function () {
     var v = document.getElementById('u').value.trim();
     if (!/^https:\/\/script\.google\.com\/macros\/s\/[\w-]+\/exec$/.test(v)) { alert('주소 형식이 맞지 않습니다. /exec 로 끝나는 전체 주소를 넣어 주세요.'); return; }
-    try { localStorage.setItem(KEY, v); } catch (e) {}
-    location.reload();
+    var ok = wr(v);
+    d.remove();
+    show(v);
+    if (!ok) alert('이 브라우저는 주소를 저장하지 못합니다(카카오톡 안, 시크릿 창, 저장 차단 등). 이번에는 열리지만 다음에 또 물어봅니다. 크롬에서 직접 열어 보세요.');
   };
 })();
 </script>
